@@ -1,4 +1,4 @@
-package io.github.milyor.qrcodeservice;
+package io.github.milyor.qrcodeservice.dto;
 
 public class ErrorResponse {
     public String error;

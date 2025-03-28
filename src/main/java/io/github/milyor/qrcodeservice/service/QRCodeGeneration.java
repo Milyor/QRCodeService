@@ -1,4 +1,4 @@
-package io.github.milyor.qrcodeservice;
+package io.github.milyor.qrcodeservice.service;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
@@ -7,6 +7,8 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.awt.image.BufferedImage;
@@ -14,7 +16,7 @@ import java.util.Map;
 
 @Service
 public class QRCodeGeneration {
-
+    private static final Logger logger = LoggerFactory.getLogger(QRCodeGeneration.class);
     public BufferedImage createQRCode(int size, String contents, String level) {
         QRCodeWriter qrCodeWriter = new QRCodeWriter();
 
@@ -24,7 +26,7 @@ public class QRCodeGeneration {
             return MatrixToImageWriter.toBufferedImage(bitMatrix);
 
         } catch (WriterException e) {
-            e.printStackTrace();
+            logger.error("Failed to encode QR code", e);
         }
         return null;
     }
