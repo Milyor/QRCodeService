@@ -9,7 +9,6 @@ public class QRCodeRequest {
     @Pattern(regexp = "^[LMQH]$", message = "Permitted error correction levels are L, M, Q, H")
     private String correctionLevel;
 
-    @NotNull(message = "Size cannot be null")
     @Min(value = 150, message = "Image size must be at least 150 pixels")
     @Max(value = 350, message = "Image size must not exceed 350 pixels")
     private Integer size;

@@ -7,6 +7,7 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import io.github.milyor.qrcodeservice.exception.QRCodeGenerationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -26,8 +27,9 @@ public class QRCodeGeneration {
             return MatrixToImageWriter.toBufferedImage(bitMatrix);
 
         } catch (WriterException e) {
-            logger.error("Failed to encode QR code", e);
+            String errorMsg = "Failed to encode QR code";
+            logger.error(errorMsg, e);
+            throw new QRCodeGenerationException(errorMsg, e);
         }
-        return null;
     }
 }

@@ -1,6 +1,5 @@
 package io.github.milyor.qrcodeservice.controller;
 
-import io.github.milyor.qrcodeservice.dto.ErrorResponse;
 import io.github.milyor.qrcodeservice.util.ImageHandler;
 import io.github.milyor.qrcodeservice.service.QRCodeGeneration;
 import io.github.milyor.qrcodeservice.dto.QRCodeRequest;
@@ -10,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,6 +35,9 @@ public class QRCodeController {
     @Value("${qrcode.allowed.types}")
     private String allowedTypesValue;
 
+    @Value("${qrcode.default.type}")
+    private String defaultTypeValue;
+
     private Set<String> allowedTypesSet;
 
     public QRCodeController(@Autowired QRCodeGeneration qrCodeGeneration, @Autowired ImageHandler imageHandler) {
@@ -51,47 +52,42 @@ public class QRCodeController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getQRCode(@Valid QRCodeRequest request) {
+    public ResponseEntity<byte[]> getQRCode(@Valid QRCodeRequest request) throws IOException {
+
         logger.info("Received QR code request for type: {}", request.getType());
+
         int size = (request.getSize() != null) ? request.getSize() : defaultSize;
         String correctionLevel = (request.getCorrectionLevel() != null && !request.getCorrectionLevel().isBlank())
                 ? request.getCorrectionLevel().toUpperCase()
                 : defaultCorrectionLevel;
-        String requestedType = (request.getType() != null) ? request.getType().toLowerCase() : "";
+        String requestedType = (request.getType() != null) ? request.getType().toLowerCase() : defaultTypeValue;
 
         logger.info("Processing QR code request: Size={}, Level={}, Type={}", size, correctionLevel,requestedType);
 
-        try {
-            BufferedImage bufferedImage = qrCodeGeneration.createQRCode(
-                    request.getSize(),
-                    request.getContent(),
-                    request.getCorrectionLevel()
-            );
-
-            if (bufferedImage == null) {
-                logger.error("QR code generation returned null for content starting with: {}",
-                        request.getContent().substring(0, Math.min(request.getContent().length(), 50)));
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(new ErrorResponse("Failed to generate QR code image"));
-            }
-            logger.debug("Successfully generated BufferedImage");
-
-            byte[] imageBytes = imageHandler.writeImageToByteArray(bufferedImage, request.getType());
-
-            logger.info("successfully processed QR code request for type: {}", request.getType());
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType("image/" + request.getType()))
-                    .body(imageBytes);
-
-        } catch (IOException e) {
-            logger.error("IOException occurred while writing image bytes for type {}", request.getType(), e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(new ErrorResponse("Only png, jpeg and gif image types are supported"));
+        if (requestedType.isBlank() || !allowedTypesSet.contains(requestedType)) {
+            logger.warn("Unsupported image type {}", requestedType);
+            throw new IllegalArgumentException("Unsupported image type " + requestedType + ". Allowed types are: " + allowedTypesValue);
         }
-    }
 
-}
+        String imageIOType = requestedType.equals("jpg") ? "jpeg" : requestedType;
+
+        BufferedImage bufferedImage = qrCodeGeneration.createQRCode(
+                size,
+                request.getContent(),
+                correctionLevel
+        );
+        logger.debug("Successfully generated BufferedImage");
+
+        byte[] imageBytes = imageHandler.writeImageToByteArray(bufferedImage, imageIOType);
+
+        logger.info("successfully processed QR code request for type: {}", request.getType());
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("image/" + requestedType))
+                .body(imageBytes);
+
+        }
+
+    }
 
 
