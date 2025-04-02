@@ -121,7 +121,7 @@ public class QRCodeController {
         logger.info("successfully processed QR code request for type: {}", requestedType);
 
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType("image/" + requestedType))
+                .contentType(MediaType.parseMediaType("image/" + imageIOType))
                 .body(imageBytes);
 
         }
