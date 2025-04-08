@@ -1,6 +1,8 @@
 package io.github.milyor.qrcodeservice.controller;
 
 import io.github.milyor.qrcodeservice.dto.ErrorResponse;
+import io.github.milyor.qrcodeservice.entity.QRCodeRecord;
+import io.github.milyor.qrcodeservice.repo.QRCodeRecordRepo;
 import io.github.milyor.qrcodeservice.util.ImageHandler;
 import io.github.milyor.qrcodeservice.service.QRCodeGeneration;
 import io.github.milyor.qrcodeservice.dto.QRCodeRequest;
@@ -10,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.PostConstruct;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @RestController
@@ -30,11 +34,10 @@ import java.util.Set;
 @Tag(name = "QR Code")
 public class QRCodeController {
 
-
-
     private static final Logger logger = LoggerFactory.getLogger(QRCodeController.class);
     private final QRCodeGeneration qrCodeGeneration;
     private final ImageHandler imageHandler;
+    private final QRCodeRecordRepo qrCodeRecordRepo;
 
     @Value("${qrcode.default.size}")
     private int defaultSize;
@@ -50,9 +53,10 @@ public class QRCodeController {
 
     private Set<String> allowedTypesSet;
 
-    public QRCodeController(@Autowired QRCodeGeneration qrCodeGeneration, @Autowired ImageHandler imageHandler) {
+    public QRCodeController(@Autowired QRCodeGeneration qrCodeGeneration, @Autowired ImageHandler imageHandler, @Autowired QRCodeRecordRepo qrCodeRecordRepo) {
         this.qrCodeGeneration = qrCodeGeneration;
         this.imageHandler = imageHandler;
+        this.qrCodeRecordRepo = qrCodeRecordRepo;
     }
 
     @PostConstruct
@@ -90,6 +94,7 @@ public class QRCodeController {
             }
     )
     @GetMapping
+    @Transactional
     public ResponseEntity<byte[]> getQRCode(@Valid QRCodeRequest request) throws IOException {
 
         logger.info("Received QR code request for type: {}", request.getType());
@@ -108,6 +113,14 @@ public class QRCodeController {
         }
 
         String imageIOType = requestedType.equals("jpg") ? "jpeg" : requestedType;
+        // Save metaData of the qrCode
+        try {
+            QRCodeRecord qrcode = new QRCodeRecord(request.getContent(), size, correctionLevel, imageIOType, LocalDateTime.now());
+            QRCodeRecord savedRecord = qrCodeRecordRepo.save(qrcode);
+            logger.info("Saved QR code record: {}", savedRecord);
+        } catch (Exception e) {
+            logger.error("Error savin QR Code metaData for content starting with type: {}", request.getContent().substring(0, Math.min(request.getContent().length(), 50)), e);
+        }
 
         BufferedImage bufferedImage = qrCodeGeneration.createQRCode(
                 size,
