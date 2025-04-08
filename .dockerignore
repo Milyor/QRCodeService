@@ -1,0 +1,12 @@
+# Git rep files
+.gitignore
+.gitattributes
+
+# IDE files
+.idea/
+
+# Build
+.git/
+build/
+
+Dockerfile

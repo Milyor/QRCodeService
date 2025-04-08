@@ -4,6 +4,8 @@ import io.github.milyor.qrcodeservice.service.QRCodeGeneration;
 import io.github.milyor.qrcodeservice.util.ImageHandler;
 import org.junit.jupiter.api.Test;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
+
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
@@ -56,7 +58,8 @@ class QRCodeControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/qrcode")
                         .param("content", testContent)
-                        .param("type", testType))
+                        .param("type", testType)
+                .with(httpBasic("user","password")))
                 // Add other params like size/level if needed for the test case
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.IMAGE_PNG_VALUE))
@@ -69,7 +72,7 @@ class QRCodeControllerTest {
 
     @Test
     void testWith_EmptyContent_shouldReturnBadRequest(@Autowired MockMvc mockMvc) throws Exception {
-        mockMvc.perform(get("/api/qrcode")
+        mockMvc.perform(get("/api/qrcode").with(httpBasic("user","password"))
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(content()
@@ -79,7 +82,7 @@ class QRCodeControllerTest {
 
     @Test
     void testWithContent_NoOtherParameter(@Autowired MockMvc mockMvc) throws Exception {
-        mockMvc.perform(get("/api/qrcode").param("content", "test"))
+        mockMvc.perform(get("/api/qrcode").param("content", "test").with(httpBasic("user","password")))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.IMAGE_PNG_VALUE));
     }
@@ -87,7 +90,8 @@ class QRCodeControllerTest {
     void testWithContent_withContentAndType(@Autowired MockMvc mockMvc) throws Exception { // Consider renaming test method
         mockMvc.perform(get("/api/qrcode")
                         .param("content", "test")
-                        .param("type", "jpg")) // <-- Use lowercase 't'
+                        .param("type", "jpg")
+                        .with(httpBasic("user","password"))) // <-- Use lowercase 't'
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.IMAGE_JPEG_VALUE));
     }
@@ -96,7 +100,8 @@ class QRCodeControllerTest {
     void testWithContent_andWrongType(@Autowired MockMvc mockMvc) throws Exception {
         mockMvc.perform(get("/api/qrcode")
                         .param("content", "test")
-                        .param("Type", "bmp"))
+                        .param("Type", "bmp")
+                        .with(httpBasic("user","password")))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.error", containsString("Validation failed: type: Only png, jpeg, jpg and gif")));
@@ -106,7 +111,8 @@ class QRCodeControllerTest {
     void testWithContent_andWrongLevel(@Autowired MockMvc mockMvc) throws Exception {
         mockMvc.perform(get("/api/qrcode")
                 .param("content", "test")
-                .param("correctionLevel", "X"))
+                .param("correctionLevel", "X")
+                        .with(httpBasic("user","password")))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.error", containsString("Validation failed: correctionLevel: Permitted error correction levels are L, M, Q, H")));
@@ -115,7 +121,8 @@ class QRCodeControllerTest {
     void testWithContent_andWrongSizeBelow150(@Autowired MockMvc mockMvc) throws Exception {
         mockMvc.perform(get("/api/qrcode")
                         .param("content", "test")
-                        .param("Size", "50"))
+                        .param("Size", "50")
+                        .with(httpBasic("user","password")))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.error", containsString("Validation failed: size: Image size must be at least 150 pixels")));
@@ -125,7 +132,8 @@ class QRCodeControllerTest {
     void testWithContent_andWrongSizeAbove350(@Autowired MockMvc mockMvc) throws Exception {
         mockMvc.perform(get("/api/qrcode")
                         .param("content", "test")
-                        .param("Size", "400"))
+                        .param("Size", "400")
+                        .with(httpBasic("user","password")))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.error", containsString("Validation failed: size: Image size must not exceed 350 pixels")));
@@ -137,7 +145,8 @@ class QRCodeControllerTest {
                         .param("content", "test")
                         .param("type", "bmp")
                         .param("correctionLevel", "X")
-                        .param("Size", "50"))
+                        .param("Size", "50")
+                        .with(httpBasic("user","password")))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
